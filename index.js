@@ -2,10 +2,36 @@ const Discord = require("discord.js")
 const mySecret = process.env['TOKEN']
 const fetch = require("node-fetch")
 const axios = require("axios")
+const Database = require("@replit/database")
+const db = new Database()
+
 const client = new Discord.Client()
 
 const sadWords = ["sad", "depressed", "unhappy", "angry"]
-const encourageMe = ["Cheer up!", "Hang in there!", "You are a great person!", "Don't worry, be happy"]
+
+const starterEncourageMe = ["Cheer up!", "Hang in there!", "You are a great person!", "Don't worry, be happy", "fuck off"]
+
+db.get("encourageMe").then(encourageMe => {
+  if (!encourageMe || encourageMe.length < 1) {
+    db.set("encourageMe", starterEncourageMe)
+  }
+});
+
+function updateEncourageMe(encouragingMessage) {
+  db.get("encourageMe").then(encourageMe => {
+    if (encourageMe.length > index) {
+      encourageMe.splice(index, 1);
+      db.set("encourageMe", encourageMe)
+    }
+  })
+}
+
+function deleteEncourageMe(index) {
+  db.get("encourageMe").then(encourageMe => {
+    encourageMe.push([encouragingMessage])
+    db.set("encourageMe", encourageMe)
+  })
+}
 
 const getQuote = async () => {
   return await fetch("https://zenquotes.io/api/random").then(response => {
@@ -26,11 +52,13 @@ client.on("member", member => {
 
 client.on("message", async (msg) => {
   if (msg.author.bot) return
-  // Repeated Messages:z
+  // Repeated Messages:
   if (msg.content === "hi") {
     return msg.reply("K cha!")
   } else if (msg.content === "joke bhan") {
     return msg.reply("joke :v")
+  } else if (msg.content === "Kun chwak kt le yad garyo malai") {
+    return msg.reply("bhag muji chakka")
   }
   if (msg.content === "motivate me") {
     getQuote().then(quote => {
@@ -38,7 +66,7 @@ client.on("message", async (msg) => {
     })
   }
   if (msg.content === "joke") {
-    let getJoke = async() => {
+    let getJoke = async () => {
       let response = await axios.get('https://official-joke-api.appspot.com/random_joke');
       let joke = response.data;
       return joke
@@ -47,9 +75,21 @@ client.on("message", async (msg) => {
     // console.log(jokeValue)
     msg.reply(`A joke just for you: \n ${jokeValue.setup} \n` + " -" + `${jokeValue.punchline}`)
   }
-  if(sadWords.some(word => msg.content.includes(word))) {
-    const icuEncourage = encourageMe[Math.floor(Math.random() * encourageMe.length)]
-    msg.reply(icuEncourage)
+  if (sadWords.some(word => msg.content.includes(word))) {
+    db.get("encourageMe").then(encourageMe => {
+      const icuEncourage = encourageMe[Math.floor(Math.random() * encourageMe.length)]
+      msg.reply(icuEncourage)
+    })
+  }
+  if(msg.content.startsWith("$new")) {
+    encouragingMessage = msg.content.split("$new ")[1]
+    updateEncourageMe(encouragingMessage)
+    msg.channel.send("New encouraging message added.")
+  }
+  if(msg.content.startsWith("$del")) {
+    index = parseInt(msg.content.split("$del ")[1])
+    deleteEncourageMe(index)
+    msg.channel.send("New encouraging message deleted.")
   }
 })
 
